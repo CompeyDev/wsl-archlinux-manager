@@ -1,0 +1,97 @@
+package main
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"strings"
+	"time"
+
+	"github.com/CompeyDev/wsl-archlinux-manager/lib/core"
+	"github.com/briandowns/spinner"
+	"github.com/gookit/color"
+)
+
+func main() {
+	if runtime.GOOS == "windows" {
+		checks()
+		core.Build()
+	} else {
+		fmt.Println("WSL is reserved for windows users only.")
+		os.Exit(1)
+	}
+}
+
+func build() {
+	checks()
+
+}
+
+// TODO: Add colors
+func checks() {
+	color.Blueln("======> Pre-installation checks")
+	fmt.Println("🔃 Running checks...")
+	_, permsErr := os.Open("\\\\.\\PHYSICALDRIVE0")
+
+	if permsErr != nil {
+		fmt.Println("Please run this command with elevated priveleges.")
+		os.Exit(1)
+	}
+
+	bar := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	bar.Prefix = " "
+	bar.Suffix = " Checking for WSL..."
+	bar.Start()
+
+	getAvailability, availabilityErr := exec.Command("powershell.exe", "(Get-WindowsOptionalFeature -Online -FeatureName *Subsystem*).State").Output()
+
+	if availabilityErr != nil {
+		color.Red.Println("\r    ❎ Failed to check for WSL availability.")
+	}
+
+	if strings.Trim(string(getAvailability), "\n\r") == "Enabled" {
+		color.Green.Println("\r    ✅ WSL is enabled.")
+		bar.Stop()
+
+		bar.Prefix = " "
+		bar.Suffix = " Checking for existing WSL distributions..."
+
+		bar.Start()
+
+		preInstalledDistro, installedDistroErr := exec.Command("powershell.exe", "wsl").Output()
+
+		if installedDistroErr != nil {
+			color.Red.Println("\r    ❎ Failed to check for preinstalled distributions.")
+			bar.Stop()
+		}
+
+		if strings.Contains(string(preInstalledDistro), "no installed distributions") {
+			color.Red.Println("\r    ❎ Preinstalled distributions do exist. (Please make sure the default distribution is Debian-based)")
+			bar.Stop()
+		}
+
+	}
+
+	userHomeDir, homeDirErr := os.UserHomeDir()
+
+	bar.Suffix = " Creating install directory..."
+	bar.Start()
+	time.Sleep(300000000)
+	if homeDirErr != nil {
+		fmt.Println("❎ Failed to initialize installation directory.")
+		os.Exit(1)
+	}
+
+	installDir := path.Join(userHomeDir, ".wslm")
+	archDir := path.Join(installDir, "arch")
+
+	os.Mkdir(installDir, fs.FileMode(os.O_RDWR))
+	os.Mkdir(archDir, fs.FileMode(os.O_RDWR))
+	bar.Stop()
+	color.Green.Print("\r    ✅ Successfully initialized installation directory.")
+	color.Bold.Println("\n✅ Initialized WSLm.")
+	color.Blueln("===============================")
+}
