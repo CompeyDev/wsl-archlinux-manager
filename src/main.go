@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/CompeyDev/wsl-archlinux-manager/lib/core"
+	logger "github.com/CompeyDev/wsl-archlinux-manager/util"
 	"github.com/briandowns/spinner"
 	"github.com/gookit/color"
 )
@@ -25,12 +26,6 @@ func main() {
 	}
 }
 
-func build() {
-	checks()
-
-}
-
-// TODO: Add colors
 func checks() {
 	color.Blueln("======> Pre-installation checks")
 	fmt.Println("🔃 Running checks...")
@@ -49,11 +44,11 @@ func checks() {
 	getAvailability, availabilityErr := exec.Command("powershell.exe", "(Get-WindowsOptionalFeature -Online -FeatureName *Subsystem*).State").Output()
 
 	if availabilityErr != nil {
-		color.Red.Println("\r    ❎ Failed to check for WSL availability.")
+		logger.Error("Failed to check for WSL availability.")
 	}
 
 	if strings.Trim(string(getAvailability), "\n\r") == "Enabled" {
-		color.Green.Println("\r    ✅ WSL is enabled.")
+		logger.Info("WSL is enabled.")
 		bar.Stop()
 
 		bar.Prefix = " "
@@ -64,12 +59,12 @@ func checks() {
 		preInstalledDistro, installedDistroErr := exec.Command("powershell.exe", "wsl").Output()
 
 		if installedDistroErr != nil {
-			color.Red.Println("\r    ❎ Failed to check for preinstalled distributions.")
+			logger.Error("Failed to check for preinstalled distributions.")
 			bar.Stop()
 		}
 
 		if strings.Contains(string(preInstalledDistro), "no installed distributions") {
-			color.Red.Println("\r    ❎ Preinstalled distributions do exist. (Please make sure the default distribution is Debian-based)")
+			logger.Error("Preinstalled distributions do not exist. (Please make sure the default WSL distribution is Debian-based)")
 			bar.Stop()
 		}
 
@@ -79,10 +74,9 @@ func checks() {
 
 	bar.Suffix = " Creating install directory..."
 	bar.Start()
-	time.Sleep(300000000)
+	time.Sleep(1 * time.Second)
 	if homeDirErr != nil {
-		fmt.Println("❎ Failed to initialize installation directory.")
-		os.Exit(1)
+		logger.Error("Failed to initialize installation directory.")
 	}
 
 	installDir := path.Join(userHomeDir, ".wslm")
@@ -91,7 +85,7 @@ func checks() {
 	os.Mkdir(installDir, fs.FileMode(os.O_RDWR))
 	os.Mkdir(archDir, fs.FileMode(os.O_RDWR))
 	bar.Stop()
-	color.Green.Print("\r    ✅ Successfully initialized installation directory.")
-	color.Bold.Println("\n✅ Initialized WSLm.")
+	logger.Info("Successfully initialized installation directory.")
+	logger.Progress("Initialized WSLm.")
 	color.Blueln("===============================")
 }

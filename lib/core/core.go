@@ -11,9 +11,9 @@ import (
 	"encoding/json"
 
 	"github.com/CompeyDev/wsl-archlinux-manager/lib/checkers"
+	logger "github.com/CompeyDev/wsl-archlinux-manager/util"
 	"github.com/briandowns/spinner"
 	"github.com/cavaliergopher/grab/v3"
-	"github.com/gookit/color"
 )
 
 // TODO:
@@ -32,7 +32,7 @@ func Build() {
 	body, reqErr := io.ReadAll(userLocation.Body)
 
 	if reqErr != nil {
-		color.Red.Println("\r    ❎ An internal error occurred when attempting to pull the RootFS. This is probably a bug; you might want to report this.")
+		logger.Error("An internal error occurred when attempting to pull the RootFS. This is probably a bug; you might want to report this.")
 		bar.Stop()
 		os.Exit(1)
 	}
@@ -57,7 +57,7 @@ func Build() {
 	parseErr := json.Unmarshal([]byte(body), &resStruct)
 
 	if parseErr != nil {
-		color.Red.Println("\r    ❎ Failed to parse response body! This is a probably a bug; you might want to report this.")
+		logger.Error("Failed to parse response body! This is a probably a bug; you might want to report this.")
 		bar.Stop()
 		os.Exit(1)
 	}
@@ -68,9 +68,9 @@ func Build() {
 	isSuccessful_1, _ := pullArchive(mirror)
 
 	if !isSuccessful_1 {
-		color.Yellow.Println("\r    ❎ Attempt #1 to pull RootFS failed, trying again with Worldwide...")
+		logger.Warn("Attempt #1 to pull RootFS failed, trying again with Worldwide mirror...")
 
-		bar.Suffix = " Attempt #1 to pull RootFS failed, trying again with Worldwide..."
+		bar.Suffix = " Attempt #1 to pull RootFS failed, trying again with Worldwide mirror..."
 
 		bar.Start()
 
@@ -78,7 +78,7 @@ func Build() {
 		isSuccessful_2, _ := pullArchive(globalMirror)
 
 		if !isSuccessful_2 {
-			color.Red.Println("\r    ❎ Attempt #2 to pull RootFS failed. Please try again.")
+			logger.Error("Attempt #2 to pull RootFS failed. Please try again.")
 			bar.Stop()
 			os.Exit(1)
 		} else {
@@ -94,12 +94,12 @@ func Build() {
 func getMirror(country string) string {
 	resp, err := http.Get("https://archlinux.org/download/")
 	if err != nil {
-		color.Red.Println("❎ Failed to download RootFS.")
+		logger.Error("Failed to download RootFS.")
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		color.Red.Println("❎ An internal error occurred when attempting to pull the RootFS. This is probably a bug; you might want to report this.")
+		logger.Error("An internal error occurred when attempting to pull the RootFS. This is probably a bug; you might want to report this.")
 	}
 
 	mirrorLink := strings.Split(strings.Split(strings.Split(strings.Split(strings.Split(strings.Split(string(body), fmt.Sprintf(`title="%s"`, country))[1], `title="Download from`)[0], fmt.Sprintf(`></span> %s</h5>`, country))[1], `<ul>`)[1], `<li><a href="`)[1], `"`)[0]
@@ -116,10 +116,10 @@ func pullArchive(url string) (isSuccessful bool, error error) {
 	res, err := grab.Get(".", structuredUrl)
 
 	if err != nil {
-		color.Red.Println("\r    ❎ Failed to download RootFS.")
+		logger.Error("Failed to download RootFS.")
 		return false, err
 	}
 
-	color.Bold.Println("\r    ✅ Downloaded RootFS", res.Filename)
+	logger.Info(fmt.Sprintf("Downloaded RootFS %s", res.Filename))
 	return true, nil
 }
