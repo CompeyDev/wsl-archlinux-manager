@@ -39,20 +39,22 @@ func VerifySignature(mirrorUrl string) {
 	}
 
 	unixWd := fmt.Sprintf("/mnt/c/%s", strings.ReplaceAll(strings.Split(userHomeDir, `C:\`)[1], `\`, "/")) + strings.ReplaceAll(strings.Split(cwd, userHomeDir)[1], `\`, "/")
-
-	// does not work?
-
-	getAuthenticity, authenticityErr := exec.Command("powershell.exe", fmt.Sprintf(`wsl bash -c "cd %s && gpg --keyserver-options auto-key-retrieve --verify archlinux-bootstrap-2022.11.01-x86_64.tar.gz.sig"`, unixWd)).Output()
-
+	logger.Info(fmt.Sprintf("Looking for verification signature in Unix Directory %s", unixWd))
+	cmd := exec.Command("wsl.exe", `bash`, `-c`, `gpg --keyserver-options auto-key-retrieve --verify archlinux-bootstrap-2022.11.01-x86_64.tar.gz.sig`)
+	getAuthenticity, authenticityErr := cmd.CombinedOutput()
 	if authenticityErr != nil {
+		bar.Stop()
 		logger.Error("Failed to verify authenticity of RootFS. Refusing to continue.")
-		os.Exit(1)
+	}
+	if strings.Contains(strings.Trim(string(getAuthenticity), "\n\r"), "Good signature") {
+		logger.Info("Matching signature: 4AA4 767B BC9C 4B1D 18AE  28B7 7F2D 434B 9741 E8AC")
+		logger.Info("Successfully matched checksums and verified authenticity!")
+		bar.Stop()
+	} else {
+		bar.Stop()
+		logger.Error("Failed to verify authenticity of RootFS. Refusing to continue.")
 	}
 
-	logger.Info("Successfully matched checksums and verified authenticity!")
-	bar.Stop()
-
-	fmt.Println(strings.Trim(string(getAuthenticity), "\n\r"))
 }
 
 func pullSig(url string) (isSuccessful bool, error error) {
