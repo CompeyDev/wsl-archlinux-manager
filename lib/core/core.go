@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -65,7 +66,7 @@ func Build() {
 	bar.Suffix = fmt.Sprintf(" Using mirror %s...", mirror)
 	time.Sleep(time.Second * 5)
 	bar.Stop()
-	isSuccessful_1, _ := pullArchive(mirror)
+	isSuccessful_1, version, _ := pullArchive(mirror)
 
 	if !isSuccessful_1 {
 		logger.Warn("Attempt #1 to pull RootFS failed, trying again with Worldwide mirror...")
@@ -75,7 +76,7 @@ func Build() {
 		bar.Start()
 
 		globalMirror := getMirror("Worldwide")
-		isSuccessful_2, _ := pullArchive(globalMirror)
+		isSuccessful_2, _, _ := pullArchive(globalMirror)
 
 		if !isSuccessful_2 {
 			logger.Error("Attempt #2 to pull RootFS failed. Please try again.")
@@ -88,6 +89,19 @@ func Build() {
 	} else {
 		checkers.VerifySignature(mirror)
 	}
+
+	bar.Suffix = " Untarring archive..."
+	bar.Start()
+
+	stdoute, untarErr := exec.Command("wsl.exe", "bash", "-c", fmt.Sprintf(`tar -xzvf archlinux-bootstrap-%s-x86_64.tar.gz`, version)).CombinedOutput()
+
+	if untarErr != nil {
+		println(untarErr)
+		logger.Error("Failed to untar archive; this is a non-recoverable error. Quitting.")
+	}
+	println(stdoute)
+	bar.Stop()
+	logger.Info("Successfully untarred archive!")
 
 }
 
@@ -106,7 +120,7 @@ func getMirror(country string) string {
 	return mirrorLink
 }
 
-func pullArchive(url string) (isSuccessful bool, error error) {
+func pullArchive(url string) (isSuccessful bool, ver string, error error) {
 	bar := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	bar.Prefix = " "
 	bar.Suffix = " Downloading RootFS..."
@@ -117,9 +131,9 @@ func pullArchive(url string) (isSuccessful bool, error error) {
 
 	if err != nil {
 		logger.Error("Failed to download RootFS.")
-		return false, err
+		return false, "UNKNOWN", err
 	}
 
 	logger.Info(fmt.Sprintf("Downloaded RootFS %s", res.Filename))
-	return true, nil
+	return true, version, nil
 }

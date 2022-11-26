@@ -18,3 +18,9 @@ vendor/
 
 # Go workspace file
 go.work
+
+# Arch bootstrap files
+archlinux-bootstrap-*.tar.gz
+archlinux-bootstrap-*.tar.gz.sig
+root.x86_64
+root.x86_64/*

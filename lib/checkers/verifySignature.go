@@ -18,7 +18,7 @@ func VerifySignature(mirrorUrl string) {
 	bar.Suffix = " Verifying signature of RootFS..."
 	bar.Start()
 
-	success, _ := pullSig(mirrorUrl)
+	success, version, _ := pullSig(mirrorUrl)
 
 	if !success {
 		logger.Error("Failed to download signature of RootFS. Refusing to continue.")
@@ -40,7 +40,7 @@ func VerifySignature(mirrorUrl string) {
 
 	unixWd := fmt.Sprintf("/mnt/c/%s", strings.ReplaceAll(strings.Split(userHomeDir, `C:\`)[1], `\`, "/")) + strings.ReplaceAll(strings.Split(cwd, userHomeDir)[1], `\`, "/")
 	logger.Info(fmt.Sprintf("Looking for verification signature in Unix Directory %s", unixWd))
-	cmd := exec.Command("wsl.exe", `bash`, `-c`, `gpg --keyserver-options auto-key-retrieve --verify archlinux-bootstrap-2022.11.01-x86_64.tar.gz.sig`)
+	cmd := exec.Command("wsl.exe", `bash`, `-c`, fmt.Sprintf(`gpg --keyserver-options auto-key-retrieve --verify archlinux-bootstrap-%s-x86_64.tar.gz.sig`, version))
 	getAuthenticity, authenticityErr := cmd.CombinedOutput()
 	if authenticityErr != nil {
 		bar.Stop()
@@ -57,7 +57,7 @@ func VerifySignature(mirrorUrl string) {
 
 }
 
-func pullSig(url string) (isSuccessful bool, error error) {
+func pullSig(url string) (isSuccessful bool, ver string, error error) {
 	bar := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	bar.Prefix = " "
 	bar.Suffix = " Downloading Signature..."
@@ -68,10 +68,10 @@ func pullSig(url string) (isSuccessful bool, error error) {
 
 	if err != nil {
 		logger.Error("Failed to download Signature.")
-		return false, err
+		return false, version, err
 	}
 
 	logger.Info(fmt.Sprintf("Downloaded Signature %s", res.Filename))
 
-	return true, nil
+	return true, version, nil
 }
