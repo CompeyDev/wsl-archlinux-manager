@@ -18,7 +18,7 @@ import (
 
 func main() {
 	if runtime.GOOS == "windows" {
-		checks()
+		// checks()
 		core.Build()
 	} else {
 		fmt.Println("WSL is reserved for windows users only.")
